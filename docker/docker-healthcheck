@@ -1,11 +1,17 @@
 #!/bin/sh
 set -eu
 
-host="$(hostname -i || echo '127.0.0.1')"
-if [ -d "$DOCKER_TLS_CERTDIR" ]; then
+host="$(hostname -i 2>/dev/null || { echo 'Failed to get host IP'; exit 1; })"
+
+if [ -n "${DOCKER_TLS_CERTDIR:-}" ] && [ -d "$DOCKER_TLS_CERTDIR" ]; then
 	export DOCKER_HOST="tcp://$host:2376"
-else
+elif [ -z "${DOCKER_TLS_CERTDIR:-}" ]; then
 	export DOCKER_HOST="tcp://$host:2375"
+else
+    echo "TLS cert directory does not exist: $DOCKER_TLS_CERTDIR"
+    exit 1
 fi
 
-docker-entrypoint.sh version > /dev/null || exit 1
+docker-entrypoint.sh version > /dev/null || { echo "Failed to get Docker version"; exit 1; }
+
+	
